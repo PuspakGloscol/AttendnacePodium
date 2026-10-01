@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>L3 Admin | GC Attendance</title>
+  <link rel="stylesheet" href="../admin.css?v=20261001-3">
+</head>
+<body>
+  <main class="admin-wrap">
+    <header class="admin-head">
+      <div>
+        <h1>L3 Admin</h1>
+        <p>Manage the live attendance and punctuality leaderboard.</p>
+      </div>
+      <img class="logo" src="../gc-logo.jpg" alt="Gloucestershire College">
+    </header>
+
+    <section id="loginView" class="panel login" style="display:block">
+      <h2>Admin Login</h2>
+      <p>Sign in with the administrator account for this department.</p>
+      <form id="loginForm">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="username" required>
+        <br><br>
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" required>
+        <br><br>
+        <button id="loginButton" class="btn" type="submit">Sign in</button>
+        <div id="loginError" class="error"></div>
+      </form>
+    </section>
+
+    <section id="appView" style="display:none">
+      <div class="panel">
+        <div class="signed-in">
+          <div>
+            <strong>Signed in as <span id="adminEmail"></span></strong>
+            <div class="department-label">Department: <span id="departmentName">l3</span></div>
+            <div id="adminStatus" class="message"></div>
+          </div>
+          <button id="logout" class="btn secondary" type="button">Sign out</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Add / Edit Group</h2>
+        <form id="groupForm">
+          <div class="form-grid">
+            <div>
+              <label for="groupName">Group name</label>
+              <input id="groupName" required placeholder="e.g. l3 Computing A">
+            </div>
+            <div>
+              <label for="attendance">Attendance %</label>
+              <input id="attendance" type="number" min="0" max="100" step="0.1" required>
+            </div>
+            <div>
+              <label for="punctuality">Punctuality %</label>
+              <input id="punctuality" type="number" min="0" max="100" step="0.1" required>
+            </div>
+            <button id="saveBtn" class="btn" type="submit">Add group</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>Current groups</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>GROUP</th><th>ATTENDANCE</th><th>PUNCTUALITY</th><th>ACTIONS</th></tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js?v=20261001-3"></script>
+  <script src="../common-admin.js?v=20261001-3"></script>
+</body>
+</html>
