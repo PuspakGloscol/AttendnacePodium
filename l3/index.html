@@ -321,7 +321,7 @@ let revealToken=0;
 function score(g){return (Number(g.attendance||0)+Number(g.punctuality||0))/2;}
 function sorted(){return [...groupsData].sort((a,b)=>score(b)-score(a)||Number(b.attendance)-Number(a.attendance)||String(a.group_name).localeCompare(String(b.group_name)));}
 function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
-function statusFor(p){return p>=95?'Outstanding':p>=90?'Excellent':'On track';}
+function statusFor(p){return p>=95?'Outstanding':p>=90?'Excellent':'Need Improvement';}
 function rankClass(i){return i===0?'first':i===1?'second':i===2?'third':'';}
 function renderSummary(){
   const rows=sorted();
