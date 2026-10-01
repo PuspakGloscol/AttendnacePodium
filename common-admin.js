@@ -685,11 +685,20 @@
     const cleanUrl =
       SUPABASE_URL.replace(/\/+$/, '');
 
-    client =
-      window.supabase.createClient(
-        cleanUrl,
-        SUPABASE_KEY
-      );
+    const storageKey = `gc-attendance-${DEPARTMENT_SLUG}-auth`;
+
+client = window.supabase.createClient(
+    cleanUrl,
+    SUPABASE_KEY,
+    {
+        auth: {
+            storageKey: storageKey,
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: false
+        }
+    }
+);
 
     const loginForm = $('loginForm');
     const groupForm = $('groupForm');
