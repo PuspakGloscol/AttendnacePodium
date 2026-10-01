@@ -2,114 +2,220 @@
   'use strict';
 
   const cfg = window.SUPABASE_CONFIG || {};
-  const SUPABASE_URL = String(cfg.url || '').trim().replace(/\/$/, '');
+
+  const SUPABASE_URL = String(cfg.url || '').trim();
   const SUPABASE_KEY = String(cfg.key || '').trim();
   const DEPARTMENT_SLUG = String(cfg.departmentSlug || '').trim().toLowerCase();
 
-  const byId = id => document.getElementById(id);
-  const setText = (id, value) => { const el = byId(id); if (el) el.textContent = value ?? ''; };
+  const $ = id => document.getElementById(id);
+
+  const setText = (id, value) => {
+    const el = $(id);
+    if (el) el.textContent = value ?? '';
+  };
+
   const show = (id, visible) => {
-    const el = byId(id);
+    const el = $(id);
     if (!el) return;
+
     el.hidden = !visible;
     el.style.display = visible ? '' : 'none';
-    el.classList.toggle('hidden', !visible);
   };
-  const esc = value => String(value ?? '').replace(/[&<>'"]/g, ch => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'
-  }[ch]));
-  const fmt = value => Number(value ?? 0).toFixed(1);
+
+  const escapeHtml = value =>
+    String(value ?? '').replace(/[&<>'"]/g, ch => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[ch]));
+
+  const formatNumber = value => Number(value ?? 0).toFixed(1);
 
   let client = null;
   let departmentId = null;
+  let departmentName = '';
   let editingId = null;
   let groups = [];
   let loadingSession = false;
-  let activeUserId = null;
-  let accessGranted = false;
+  let signingOut = false;
 
   function setStatus(message, type = 'info') {
-    const el = byId('adminStatus');
+    const el = $('adminStatus');
     if (!el) return;
+
     el.textContent = message || '';
     el.dataset.type = type;
-    el.style.color = type === 'error' ? '#ff8298' : '#8eeeff';
+
+    if (type === 'error') {
+      el.style.color = '#ff8298';
+    } else {
+      el.style.color = '#8eeeff';
+    }
   }
 
   function setLoginError(message) {
     setText('loginError', message || '');
   }
 
+  function showLogin() {
+    show('loginView', true);
+    show('appView', false);
+  }
+
+  function showDashboard() {
+    show('loginView', false);
+    show('appView', true);
+  }
+
   function resetForm() {
-    const form = byId('groupForm');
-    if (form) form.reset();
+    const form = $('groupForm');
+
+    if (form) {
+      form.reset();
+    }
+
     editingId = null;
     setText('saveBtn', 'Add group');
   }
 
   function renderGroups() {
-    const tbody = byId('rows');
+    const tbody = $('rows');
+
     if (!tbody) return;
+
     if (!groups.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="empty-row">No groups have been added yet.</td></tr>';
+      tbody.innerHTML =
+        '<tr><td colspan="4" class="empty-row">No groups have been added yet.</td></tr>';
       return;
     }
-    tbody.innerHTML = groups.map(g => `
+
+    tbody.innerHTML = groups.map(group => `
       <tr>
-        <td>${esc(g.group_name)}</td>
-        <td>${fmt(g.attendance)}%</td>
-        <td>${fmt(g.punctuality)}%</td>
+        <td>${escapeHtml(group.group_name)}</td>
+        <td>${formatNumber(group.attendance)}%</td>
+        <td>${formatNumber(group.punctuality)}%</td>
         <td class="actions">
-          <button type="button" class="edit" data-id="${esc(g.id)}">Edit</button>
-          <button type="button" class="delete" data-id="${esc(g.id)}">Delete</button>
+          <button
+            type="button"
+            class="edit"
+            data-id="${escapeHtml(group.id)}"
+          >
+            Edit
+          </button>
+
+          <button
+            type="button"
+            class="delete"
+            data-id="${escapeHtml(group.id)}"
+          >
+            Delete
+          </button>
         </td>
       </tr>
     `).join('');
 
-    tbody.querySelectorAll('.edit').forEach(btn => btn.addEventListener('click', () => editGroup(btn.dataset.id)));
-    tbody.querySelectorAll('.delete').forEach(btn => btn.addEventListener('click', () => deleteGroup(btn.dataset.id)));
+    tbody.querySelectorAll('.edit').forEach(button => {
+      button.addEventListener('click', () => {
+        editGroup(button.dataset.id);
+      });
+    });
+
+    tbody.querySelectorAll('.delete').forEach(button => {
+      button.addEventListener('click', () => {
+        deleteGroup(button.dataset.id);
+      });
+    });
   }
 
   async function loadGroups() {
-    if (!client || departmentId == null || !accessGranted) return;
-    setStatus('Loading groups…');
+    if (!client || !departmentId) {
+      return;
+    }
+
+    setStatus('Loading groups...');
+
     const { data, error } = await client
       .from('attendance_groups')
-      .select('id,department_id,group_name,attendance,punctuality,updated_at')
+      .select(
+        'id,department_id,group_name,attendance,punctuality,updated_at'
+      )
       .eq('department_id', departmentId)
       .order('group_name', { ascending: true });
 
     if (error) {
-      console.error('loadGroups', error);
+      console.error('loadGroups error:', error);
+
       groups = [];
       renderGroups();
-      setStatus(`Could not load groups: ${error.message}`, 'error');
+
+      setStatus(
+        `Could not load groups: ${error.message}`,
+        'error'
+      );
+
       return;
     }
 
     groups = data || [];
+
     renderGroups();
-    setStatus(`${groups.length} group${groups.length === 1 ? '' : 's'} loaded.`);
+
+    setStatus(
+      `${groups.length} group${groups.length === 1 ? '' : 's'} loaded.`
+    );
   }
 
   function editGroup(id) {
-    const g = groups.find(row => String(row.id) === String(id));
-    if (!g || !accessGranted) return;
-    editingId = g.id;
-    byId('groupName').value = g.group_name ?? '';
-    byId('attendance').value = g.attendance ?? '';
-    byId('punctuality').value = g.punctuality ?? '';
+    const group = groups.find(
+      row => String(row.id) === String(id)
+    );
+
+    if (!group) return;
+
+    editingId = group.id;
+
+    const nameInput = $('groupName');
+    const attendanceInput = $('attendance');
+    const punctualityInput = $('punctuality');
+
+    if (nameInput) {
+      nameInput.value = group.group_name ?? '';
+    }
+
+    if (attendanceInput) {
+      attendanceInput.value = group.attendance ?? '';
+    }
+
+    if (punctualityInput) {
+      punctualityInput.value = group.punctuality ?? '';
+    }
+
     setText('saveBtn', 'Update group');
-    setStatus(`Editing ${g.group_name}`);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setStatus(`Editing ${group.group_name}`);
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   }
 
   async function deleteGroup(id) {
-    const g = groups.find(row => String(row.id) === String(id));
-    if (!g || !accessGranted) return;
-    if (!window.confirm(`Delete ${g.group_name}?`)) return;
+    const group = groups.find(
+      row => String(row.id) === String(id)
+    );
 
-    setStatus(`Deleting ${g.group_name}…`);
+    if (!group) return;
+
+    const confirmed = window.confirm(
+      `Delete ${group.group_name}?`
+    );
+
+    if (!confirmed) return;
+
+    setStatus(`Deleting ${group.group_name}...`);
+
     const { error } = await client
       .from('attendance_groups')
       .delete()
@@ -117,147 +223,273 @@
       .eq('department_id', departmentId);
 
     if (error) {
-      console.error('deleteGroup', error);
-      setStatus(`Delete failed: ${error.message}`, 'error');
+      console.error('deleteGroup error:', error);
+
+      setStatus(
+        `Delete failed: ${error.message}`,
+        'error'
+      );
+
       return;
     }
 
-    if (String(editingId) === String(id)) resetForm();
+    if (String(editingId) === String(id)) {
+      resetForm();
+    }
+
     await loadGroups();
+
+    setStatus('Group deleted successfully.');
   }
 
   async function saveGroup(event) {
     event.preventDefault();
-    if (!accessGranted || departmentId == null) {
-      setStatus('Administrator access is not available for this department.', 'error');
+
+    const name = String(
+      $('groupName')?.value || ''
+    ).trim();
+
+    const attendance = Number(
+      $('attendance')?.value
+    );
+
+    const punctuality = Number(
+      $('punctuality')?.value
+    );
+
+    if (!name) {
+      setStatus(
+        'Please enter a group name.',
+        'error'
+      );
+
       return;
     }
 
-    const name = String(byId('groupName').value || '').trim();
-    const attendance = Number(byId('attendance').value);
-    const punctuality = Number(byId('punctuality').value);
+    if (
+      !Number.isFinite(attendance) ||
+      attendance < 0 ||
+      attendance > 100
+    ) {
+      setStatus(
+        'Attendance must be between 0 and 100.',
+        'error'
+      );
 
-    if (!name) return setStatus('Please enter a group name.', 'error');
-    if (!Number.isFinite(attendance) || attendance < 0 || attendance > 100) return setStatus('Attendance must be between 0 and 100.', 'error');
-    if (!Number.isFinite(punctuality) || punctuality < 0 || punctuality > 100) return setStatus('Punctuality must be between 0 and 100.', 'error');
+      return;
+    }
 
-    setStatus(editingId ? 'Updating group…' : 'Adding group…');
+    if (
+      !Number.isFinite(punctuality) ||
+      punctuality < 0 ||
+      punctuality > 100
+    ) {
+      setStatus(
+        'Punctuality must be between 0 and 100.',
+        'error'
+      );
+
+      return;
+    }
+
+    setStatus(
+      editingId
+        ? 'Updating group...'
+        : 'Adding group...'
+    );
 
     let result;
+
     if (editingId) {
       result = await client
         .from('attendance_groups')
-        .update({ group_name: name, attendance, punctuality })
+        .update({
+          group_name: name,
+          attendance,
+          punctuality
+        })
         .eq('id', editingId)
         .eq('department_id', departmentId);
     } else {
       result = await client
         .from('attendance_groups')
-        .insert({ department_id: departmentId, group_name: name, attendance, punctuality });
+        .insert({
+          department_id: departmentId,
+          group_name: name,
+          attendance,
+          punctuality
+        });
     }
 
     if (result.error) {
-      console.error('saveGroup', result.error);
-      setStatus(`Save failed: ${result.error.message}`, 'error');
+      console.error('saveGroup error:', result.error);
+
+      setStatus(
+        `Save failed: ${result.error.message}`,
+        'error'
+      );
+
       return;
     }
 
     resetForm();
+
     await loadGroups();
+
     setStatus('Saved successfully.');
   }
 
-  function showUnauthorised(message) {
-    accessGranted = false;
-    departmentId = null;
-    groups = [];
-    renderGroups();
-    show('loginView', false);
-    show('appView', true);
-    setStatus(message, 'error');
-    setText('departmentName', DEPARTMENT_SLUG || 'Unknown');
+  async function findAdministrator(user) {
+    /*
+      We intentionally use the administrator's own profile only.
+      No automatic sign out happens here.
+    */
 
-    const form = byId('groupForm');
-    if (form) form.style.display = 'none';
-    const panels = document.querySelectorAll('#appView .panel');
-    if (panels.length > 2) panels[1].style.display = 'none';
-  }
+    const {
+      data: profileRows,
+      error: profileError
+    } = await client
+      .from('admin_profiles')
+      .select('user_id,department_id')
+      .eq('user_id', user.id)
+      .limit(1);
 
-  function showAuthorised() {
-    const form = byId('groupForm');
-    if (form) form.style.display = '';
-    const panels = document.querySelectorAll('#appView .panel');
-    if (panels.length > 2) panels[1].style.display = '';
+    if (profileError) {
+      throw new Error(
+        `Administrator profile lookup failed: ${profileError.message}`
+      );
+    }
+
+    const profile = profileRows?.[0];
+
+    if (!profile) {
+      throw new Error(
+        'This account has not been linked to an administrator profile.'
+      );
+    }
+
+    if (!profile.department_id) {
+      throw new Error(
+        'This administrator does not have a department assigned.'
+      );
+    }
+
+    const {
+      data: departmentRows,
+      error: departmentError
+    } = await client
+      .from('departments')
+      .select('id,name,slug')
+      .eq('id', profile.department_id)
+      .limit(1);
+
+    if (departmentError) {
+      throw new Error(
+        `Department lookup failed: ${departmentError.message}`
+      );
+    }
+
+    const department = departmentRows?.[0];
+
+    if (!department) {
+      throw new Error(
+        'The administrator department could not be found.'
+      );
+    }
+
+    const actualSlug = String(
+      department.slug || ''
+    ).trim().toLowerCase();
+
+    if (actualSlug !== DEPARTMENT_SLUG) {
+      throw new Error(
+        `This account is linked to ${department.name}, not ${DEPARTMENT_SLUG}.`
+      );
+    }
+
+    return {
+      profile,
+      department
+    };
   }
 
   async function loadUserAndDepartment() {
-    if (!client || loadingSession) return false;
+    if (loadingSession) {
+      return false;
+    }
+
     loadingSession = true;
+
     try {
       setLoginError('');
-      setStatus('Checking administrator access…');
+      setStatus('Checking administrator access...');
 
-      const { data: userData, error: userError } = await client.auth.getUser();
-      if (userError || !userData?.user) {
-        accessGranted = false;
-        departmentId = null;
-        show('loginView', true);
-        show('appView', false);
-        setStatus('');
+      const {
+        data: userData,
+        error: userError
+      } = await client.auth.getUser();
+
+      if (userError) {
+        throw new Error(
+          `Unable to retrieve the signed in user: ${userError.message}`
+        );
+      }
+
+      const user = userData?.user;
+
+      if (!user) {
+        showLogin();
         return false;
       }
 
-      const user = userData.user;
-      activeUserId = user.id;
-      setText('adminEmail', user.email || '');
+      const result = await findAdministrator(user);
 
-      const { data: profile, error: profileError } = await client
-        .from('admin_profiles')
-        .select('user_id,department_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      departmentId = result.profile.department_id;
+      departmentName = result.department.name;
 
-      if (profileError) {
-        console.error('profile lookup', profileError);
-        showUnauthorised(`Administrator profile could not be read: ${profileError.message}`);
-        return false;
-      }
+      setText(
+        'adminEmail',
+        user.email || ''
+      );
 
-      if (!profile?.department_id) {
-        showUnauthorised('This account is not linked to a department. Add it to admin_profiles in Supabase.');
-        return false;
-      }
+      setText(
+        'departmentName',
+        departmentName
+      );
 
-      const { data: department, error: departmentError } = await client
-        .from('departments')
-        .select('id,name,slug')
-        .eq('id', profile.department_id)
-        .maybeSingle();
+      /*
+        This is the important part.
 
-      if (departmentError) {
-        console.error('department lookup', departmentError);
-        showUnauthorised(`Department lookup failed: ${departmentError.message}`);
-        return false;
-      }
+        Successful authentication stays successful.
+        We do not call signOut() here.
+      */
+      showDashboard();
 
-      if (!department) {
-        showUnauthorised(`No department was found for department ID ${profile.department_id}.`);
-        return false;
-      }
-
-      if (String(department.slug).toLowerCase() !== DEPARTMENT_SLUG) {
-        showUnauthorised(`This account is linked to ${department.name}, not ${DEPARTMENT_SLUG}. Use the correct department admin page.`);
-        return false;
-      }
-
-      departmentId = profile.department_id;
-      accessGranted = true;
-      setText('departmentName', department.name || DEPARTMENT_SLUG);
-      showAuthorised();
-      show('loginView', false);
-      show('appView', true);
       await loadGroups();
+
       return true;
+
+    } catch (error) {
+      console.error(
+        'Administrator session error:',
+        error
+      );
+
+      /*
+        IMPORTANT:
+        Never automatically sign out here.
+        Show the actual problem instead.
+      */
+
+      showDashboard();
+
+      setStatus(
+        error.message || 'Unable to verify administrator access.',
+        'error'
+      );
+
+      return false;
+
     } finally {
       loadingSession = false;
     }
@@ -265,112 +497,311 @@
 
   async function signIn(event) {
     event.preventDefault();
+
     setLoginError('');
+
     if (!client) {
-      setLoginError('Supabase is not configured. Check config.js.');
+      setLoginError(
+        'Supabase is not configured. Check config.js.'
+      );
+
       return;
     }
 
-    const email = String(byId('email').value || '').trim();
-    const password = String(byId('password').value || '');
-    const button = byId('loginButton');
-    if (button) button.disabled = true;
-    setText('loginError', 'Signing in…');
+    const email = String(
+      $('email')?.value || ''
+    ).trim();
+
+    const password = String(
+      $('password')?.value || ''
+    );
+
+    const button = $('loginButton');
+
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Signing in...';
+    }
 
     try {
-      const { error } = await client.auth.signInWithPassword({ email, password });
+      const {
+        data,
+        error
+      } = await client.auth.signInWithPassword({
+        email,
+        password
+      });
+
       if (error) {
         setLoginError(error.message);
         return;
       }
-      await loadUserAndDepartment();
+
+      /*
+        Authentication has succeeded here.
+
+        Do ONE explicit session load.
+        We do not depend on onAuthStateChange
+        to load the administrator again.
+      */
+
+      if (!data?.user) {
+        setLoginError(
+          'Authentication completed but no user was returned.'
+        );
+
+        return;
+      }
+
+      const loaded = await loadUserAndDepartment();
+
+      if (!loaded) {
+        setLoginError(
+          'You are signed in, but administrator access could not be verified. Check the administrator profile.'
+        );
+      }
+
+    } catch (error) {
+      console.error(
+        'Sign in error:',
+        error
+      );
+
+      setLoginError(
+        error.message || 'Sign in failed.'
+      );
+
     } finally {
-      if (button) button.disabled = false;
+      if (button) {
+        button.disabled = false;
+        button.textContent = 'Sign in';
+      }
     }
   }
 
   async function signOut() {
-    if (!client) return;
-    await client.auth.signOut();
-    activeUserId = null;
+    if (signingOut) {
+      return;
+    }
+
+    signingOut = true;
+
+    try {
+      await client.auth.signOut();
+    } catch (error) {
+      console.error(
+        'Sign out error:',
+        error
+      );
+    }
+
     departmentId = null;
-    accessGranted = false;
+    departmentName = '';
     groups = [];
+    editingId = null;
+
     resetForm();
-    show('loginView', true);
-    show('appView', false);
+
     setText('adminEmail', '');
-    setText('departmentName', DEPARTMENT_SLUG || '');
-    setLoginError('');
+    setText('departmentName', DEPARTMENT_SLUG);
+
+    showLogin();
+
     setStatus('Signed out.');
+
+    signingOut = false;
   }
 
   function startRealtime() {
     if (!client) return;
-    client.channel(`admin-attendance-${DEPARTMENT_SLUG}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_groups' }, payload => {
-        if (!accessGranted || departmentId == null) return;
-        const row = payload.new || payload.old;
-        if (!row || Number(row.department_id) !== Number(departmentId)) return;
-        loadGroups().catch(console.error);
-      })
-      .subscribe();
+
+    client
+      .channel(`admin-attendance-${DEPARTMENT_SLUG}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'attendance_groups'
+        },
+        payload => {
+
+          const row =
+            payload.new ||
+            payload.old;
+
+          if (!row) return;
+
+          if (
+            departmentId &&
+            Number(row.department_id) ===
+              Number(departmentId)
+          ) {
+            loadGroups().catch(error => {
+              console.error(
+                'Realtime refresh error:',
+                error
+              );
+            });
+          }
+        }
+      )
+      .subscribe(status => {
+        console.log(
+          `Attendance realtime status: ${status}`
+        );
+      });
   }
 
   function renderConfigError() {
-    show('loginView', true);
-    show('appView', false);
-    setLoginError('Supabase configuration is missing or invalid. Check this department config.js file.');
+    showLogin();
+    setLoginError(
+      'Supabase configuration is missing or invalid. Check this department config.js file.'
+    );
   }
 
   async function boot() {
-    if (!window.supabase || !SUPABASE_URL || !SUPABASE_KEY || !DEPARTMENT_SLUG || SUPABASE_URL.includes('YOUR_') || SUPABASE_KEY.includes('YOUR_')) {
+
+    /*
+      Validate configuration before creating the client.
+    */
+
+    if (
+      !window.supabase ||
+      !SUPABASE_URL ||
+      !SUPABASE_KEY ||
+      !DEPARTMENT_SLUG ||
+      SUPABASE_URL.includes('YOUR_') ||
+      SUPABASE_KEY.includes('YOUR_')
+    ) {
       renderConfigError();
       return;
     }
 
-    client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    /*
+      Remove a trailing slash just in case.
+    */
 
-    const loginForm = byId('loginForm');
-    const groupForm = byId('groupForm');
-    const logout = byId('logout');
-    if (loginForm) loginForm.addEventListener('submit', signIn);
-    if (groupForm) groupForm.addEventListener('submit', saveGroup);
-    if (logout) logout.addEventListener('click', signOut);
+    const cleanUrl =
+      SUPABASE_URL.replace(/\/+$/, '');
 
-    client.auth.onAuthStateChange((event, session) => {
-      // Never sign a user out from this callback. Supabase may emit multiple
-      // auth events during login and token refresh. Only react to explicit sign-out.
-      if (event === 'SIGNED_OUT' || !session) {
-        activeUserId = null;
-        departmentId = null;
-        accessGranted = false;
-        groups = [];
-        show('loginView', true);
-        show('appView', false);
-        setText('adminEmail', '');
-        setText('departmentName', DEPARTMENT_SLUG || '');
-        return;
+    client =
+      window.supabase.createClient(
+        cleanUrl,
+        SUPABASE_KEY
+      );
+
+    const loginForm = $('loginForm');
+    const groupForm = $('groupForm');
+    const logoutButton = $('logout');
+
+    if (loginForm) {
+      loginForm.addEventListener(
+        'submit',
+        signIn
+      );
+    }
+
+    if (groupForm) {
+      groupForm.addEventListener(
+        'submit',
+        saveGroup
+      );
+    }
+
+    if (logoutButton) {
+      logoutButton.addEventListener(
+        'click',
+        signOut
+      );
+    }
+
+    /*
+      IMPORTANT:
+
+      We deliberately do NOT call loadUserAndDepartment()
+      inside onAuthStateChange.
+
+      That was causing the login → dashboard → logout loop.
+    */
+
+    client.auth.onAuthStateChange(
+      event => {
+
+        console.log(
+          'Supabase auth event:',
+          event
+        );
+
+        /*
+          Only react when the user has actually signed out.
+
+          SIGNED_IN is handled by signIn().
+          INITIAL_SESSION is handled below.
+          TOKEN_REFRESHED does not require a reload.
+        */
+
+        if (
+          event === 'SIGNED_OUT'
+        ) {
+          departmentId = null;
+          departmentName = '';
+          groups = [];
+
+          showLogin();
+        }
       }
+    );
 
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-        setTimeout(() => {
-          loadUserAndDepartment().catch(err => {
-            console.error('session check', err);
-            setStatus(`Unable to load administrator session: ${err.message || err}`, 'error');
-          });
-        }, 0);
-      }
-    });
+    /*
+      On page load, check whether a session
+      already exists.
+
+      This allows the admin page to remain
+      logged in after a browser refresh.
+    */
+
+    const {
+      data: sessionData,
+      error: sessionError
+    } = await client.auth.getSession();
+
+    if (sessionError) {
+      console.error(
+        'getSession error:',
+        sessionError
+      );
+
+      showLogin();
+
+      setLoginError(
+        `Unable to restore your session: ${sessionError.message}`
+      );
+
+      return;
+    }
+
+    if (sessionData?.session?.user) {
+      await loadUserAndDepartment();
+    } else {
+      showLogin();
+    }
 
     startRealtime();
-    await loadUserAndDepartment();
   }
 
   boot().catch(error => {
-    console.error('Admin boot failed', error);
-    show('loginView', true);
-    show('appView', false);
-    setLoginError(`Admin page failed to start: ${error.message || error}`);
+
+    console.error(
+      'Admin boot failed:',
+      error
+    );
+
+    showLogin();
+
+    setLoginError(
+      `Admin page failed to start: ${error.message || error}`
+    );
   });
+
 })();
