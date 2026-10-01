@@ -1,5 +1,5 @@
 window.SUPABASE_CONFIG={
-  url:'YOUR_SUPABASE_PROJECT_URL',
-  key:'YOUR_SUPABASE_PUBLISHABLE_KEY',
+ url:'https://ntfoimwxosiwarbrrbzd.supabase.co',
+  key:'sb_publishable_yNmjWFiohEUACRkKQ54zyQ_PGsLLKSf',
   departmentSlug:'he'
 };
