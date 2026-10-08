@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  >
+
+  <title>Games | Gloucestershire College Computing</title>
+
+  <link
+    rel="stylesheet"
+    href="../common.css"
+  >
+
+  <style>
+
+    :root {
+      --gc: #ff2bd6;
+      --gc2: #00f7ff;
+    }
+
+
+    /* =========================================
+       GAMES PAGE
+       ========================================= */
+
+    .games .headline {
+      margin-bottom: 55px;
+    }
+
+    .games .headline h2 {
+      text-shadow:
+        0 0 12px #ff2bd6,
+        0 0 35px #00f7ff;
+
+      margin-top: 18px;
+      margin-bottom: 20px;
+    }
+
+    .games .headline p {
+      margin-top: 12px;
+    }
+
+
+    /* =========================================
+       PODIUM CONTAINER
+       ========================================= */
+
+    .games .podium {
+
+      display: grid;
+
+      grid-template-columns:
+        1fr
+        1.08fr
+        1fr;
+
+      gap: 42px;
+
+      width: 100%;
+
+      max-width: 1250px;
+
+      margin: 0 auto;
+
+      align-items: stretch;
+
+    }
+
+
+    /* =========================================
+       PODIUM CARDS
+       ========================================= */
+
+    .games .podium-card {
+
+      border-radius: 10px;
+
+      border-width: 2px;
+
+      padding: 32px 30px 30px;
+
+      min-height: 390px;
+
+      box-shadow:
+        0 0 20px rgba(255,43,214,.15),
+        inset 0 0 30px rgba(0,247,255,.04);
+
+      display: flex;
+
+      flex-direction: column;
+
+      justify-content: flex-start;
+
+    }
+
+
+    /* =========================================
+       THIRD PLACE
+       ========================================= */
+
+    .games .podium-card.third {
+      border-color: #d88952;
+    }
+
+
+    /* =========================================
+       FIRST PLACE
+       ========================================= */
+
+    .games .podium-card.first {
+
+      border-color: #ffe44d;
+
+      padding-top: 36px;
+
+    }
+
+
+    /* =========================================
+       SECOND PLACE
+       ========================================= */
+
+    .games .podium-card.second {
+      border-color: #d8e7ff;
+    }
+
+
+    /* =========================================
+       POSITION
+       ========================================= */
+
+    .games .place {
+
+      margin-bottom: 22px;
+
+      letter-spacing: .08em;
+
+    }
+
+
+    /* =========================================
+       MEDAL
+       ========================================= */
+
+    .games .medal {
+
+      font-size: 46px;
+
+      line-height: 1;
+
+      margin-bottom: 22px;
+
+    }
+
+
+    /* =========================================
+       WINNER NAME
+       ========================================= */
+
+    .games .winner-name {
+
+      letter-spacing: .04em;
+
+      line-height: 1.25;
+
+      min-height: 125px;
+
+      display: flex;
+
+      align-items: center;
+
+      justify-content: center;
+
+      padding: 0 15px;
+
+    }
+
+
+    /* =========================================
+       STATISTICS
+       ========================================= */
+
+    .games .stats {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(2, 1fr);
+
+      gap: 18px;
+
+      margin-top: auto;
+
+    }
+
+
+    .games .stat {
+
+      padding: 20px 12px;
+
+      border-radius: 12px;
+
+    }
+
+
+    .games .stat b {
+
+      display: block;
+
+      margin-bottom: 9px;
+
+    }
+
+
+    .games .stat small {
+
+      letter-spacing: .08em;
+
+    }
+
+
+    /* =========================================
+       STATUS
+       ========================================= */
+
+    .games .status {
+
+      margin-top: 30px;
+
+    }
+
+
+    /* =========================================
+       LEADERBOARD SPACING
+       ========================================= */
+
+    .games + .leader-section {
+
+      margin-top: 45px;
+
+    }
+
+
+    /* =========================================
+       LARGE SCREEN
+       ========================================= */
+
+    @media (min-width: 1400px) {
+
+      .games .podium {
+
+        max-width: 1320px;
+
+        gap: 50px;
+
+      }
+
+      .games .podium-card {
+
+        min-height: 410px;
+
+        padding-left: 35px;
+
+        padding-right: 35px;
+
+      }
+
+    }
+
+
+    /* =========================================
+       TABLET
+       ========================================= */
+
+    @media (max-width: 1100px) {
+
+      .games .podium {
+
+        grid-template-columns:
+          1fr
+          1fr
+          1fr;
+
+        gap: 25px;
+
+      }
+
+      .games .podium-card {
+
+        padding-left: 20px;
+
+        padding-right: 20px;
+
+        min-height: 360px;
+
+      }
+
+    }
+
+
+    /* =========================================
+       MOBILE
+       ========================================= */
+
+    @media (max-width: 900px) {
+
+      .games .headline {
+
+        margin-bottom: 40px;
+
+      }
+
+      .games .podium {
+
+        grid-template-columns: 1fr;
+
+        gap: 25px;
+
+        max-width: 600px;
+
+      }
+
+      .games .podium-card {
+
+        min-height: 330px;
+
+      }
+
+    }
+
+
+    /* =========================================
+       SMALL MOBILE
+       ========================================= */
+
+    @media (max-width: 600px) {
+
+      .games .podium-card {
+
+        padding: 25px 20px;
+
+        min-height: 310px;
+
+      }
+
+      .games .winner-name {
+
+        min-height: 105px;
+
+      }
+
+      .games .stats {
+
+        gap: 10px;
+
+      }
+
+    }
+
+  </style>
+
+</head>
+
+
+<body class="games">
+
+
+  <div class="scan"></div>
+
+
+  <main class="hero wrap">
+
+
+    <!-- BRAND -->
+
+    <header class="brand">
+
+      <img
+        src="../gc-logo.jpg"
+        alt="Gloucestershire College"
+      >
+
+      <div>
+
+        <div class="eyebrow">
+          GLOUCESTERSHIRE COLLEGE • COMPUTING
+        </div>
+
+        <h1>
+          GAMES ATTENDANCE LEAGUE
+        </h1>
+
+      </div>
+
+    </header>
+
+
+    <!-- MAIN HEADLINE -->
+
+    <section class="headline">
+
+      <div class="kicker">
+        LIVE ATTENDANCE LEAGUE
+      </div>
+
+      <h2>
+        SHOW UP. LEVEL UP.
+      </h2>
+
+      <p>
+        Attendance and punctuality combine behind the scenes to determine the ranking.
+      </p>
+
+    </section>
+
+
+    <!-- PODIUM -->
+
+    <section
+      id="podiumStage"
+      class="podium"
+    >
+
+
+      <!-- THIRD PLACE -->
+
+      <article class="podium-card third">
+
+        <div class="place">
+          3RD PLACE
+        </div>
+
+        <div class="medal">
+          🥉
+        </div>
+
+        <div class="winner-name">
+          ---
+        </div>
+
+        <div class="stats">
+
+
+          <div class="stat">
+
+            <b class="recent-val">
+              0.0%
+            </b>
+
+            <small>
+              RECENT ATTENDANCE
+            </small>
+
+          </div>
+<div class="stat">
+
+            <b class="pun-val">
+              0.0%
+            </b>
+
+            <small>
+              PUNCTUALITY
+            </small>
+
+          </div>
+
+
+        </div>
+
+      </article>
+
+
+      <!-- FIRST PLACE -->
+
+      <article class="podium-card first">
+
+        <div class="place">
+          1ST PLACE
+        </div>
+
+        <div class="medal">
+          🏆
+        </div>
+
+        <div class="winner-name">
+          ---
+        </div>
+
+        <div class="stats">
+
+
+          <div class="stat">
+
+            <b class="recent-val">
+              0.0%
+            </b>
+
+            <small>
+              RECENT ATTENDANCE
+            </small>
+
+          </div>
+<div class="stat">
+
+            <b class="pun-val">
+              0.0%
+            </b>
+
+            <small>
+              PUNCTUALITY
+            </small>
+
+          </div>
+
+
+        </div>
+
+      </article>
+
+
+      <!-- SECOND PLACE -->
+
+      <article class="podium-card second">
+
+        <div class="place">
+          2ND PLACE
+        </div>
+
+        <div class="medal">
+          🥈
+        </div>
+
+        <div class="winner-name">
+          ---
+        </div>
+
+        <div class="stats">
+
+
+          <div class="stat">
+
+            <b class="recent-val">
+              0.0%
+            </b>
+
+            <small>
+              RECENT ATTENDANCE
+            </small>
+
+          </div>
+<div class="stat">
+
+            <b class="pun-val">
+              0.0%
+            </b>
+
+            <small>
+              PUNCTUALITY
+            </small>
+
+          </div>
+
+
+        </div>
+
+      </article>
+
+
+    </section>
+
+
+    <!-- STATUS -->
+
+    <div
+      id="status"
+      class="status"
+    >
+      Loading live leaderboard…
+    </div>
+
+
+  </main>
+
+
+  <!-- FULL LEADERBOARD -->
+
+  <section
+    id="leaderboard"
+    class="leader-section wrap"
+  >
+
+    <div class="section-title">
+      FULL GROUP LEADERBOARD
+    </div>
+
+    <div
+      id="leaderboardBody"
+      class="leaderboard"
+    ></div>
+
+  </section>
+
+
+  <!-- SUPABASE -->
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+
+  <!-- CONFIG -->
+
+  <script src="config.js"></script>
+
+
+  <!-- COMMON SITE JAVASCRIPT -->
+
+  <script src="../common-site.js"></script>
+
+
+  <!-- INITIALISE PUBLIC ATTENDANCE PAGE -->
+
+  <script>
+
+    AttendanceApp.initPublic();
+
+  </script>
+
+
+</body>
+
+</html>
